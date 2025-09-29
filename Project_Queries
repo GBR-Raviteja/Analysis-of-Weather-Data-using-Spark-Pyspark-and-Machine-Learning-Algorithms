@@ -1,0 +1,72 @@
+#Spark DataFrames:
+
+val df = spark.read.format("csv").option("header","true").option("inferSchema","true").load("/home/ravi/BDM/Project/Sofia Air quality/*")
+
+df.columns
+
+df.show(false)
+
+df.count
+
+df.printSchema()
+
+df.groupBy("sensor_id").count().show()
+df.groupBy("location").count().show()
+df.groupBy("lon").count().show()
+df.groupBy("lat").count().show()
+
+df.describe().show()
+
+import org.apache.spark.sql.functions.{min, max}
+df.select(min("pressure"), max("pressure")).show()
+df.select(min("temperature"), max("temperature")).show()
+df.select(min("humidity"), max("humidity")).show()
+
+
+df.where("pressure > 94000").where("temperature > 28").show()
+df.where("pressure > 94000").where("temperature > 28").count()
+
+###############
+
+val data = spark.read.format("csv").option("header","true").option("inferSchema","true").load("/home/ravi/BDM/Project/Sofia Air quality/*")
+val time = data.withColumn("month",month(col("timestamp"))).withColumn("date",dayofmonth(col("timestamp"))).withColumn("year",year(col("timestamp")))
+
+time.groupBy("year").avg().select(col("year"),col("avg(pressure)"),col("avg(temperature)"),col("avg(humidity)")).show()
+time.groupBy("month").avg().select(col("month"),col("avg(pressure)"),col("avg(temperature)"),col("avg(humidity)")).show()
+time.groupBy("date").avg().select(col("date"),col("avg(pressure)"),col("avg(temperature)"),col("avg(humidity)")).show()
+
+----------------------------------------------------------------------------------------------------------------------------------------------------
+#Structure Streaming:
+
+val data = spark.read.format("csv").option("header","true").option("inferSchema","true").load("/home/ravi/BDM/Project/test.csv")
+
+val dataSchema = data.schema
+
+val data_streaming = spark.readStream.option("header","true").schema(dataSchema).option("maxFilesPerTrigger", 1).csv("/home/ravi/BDM/Project/Sofia Air quality/*")
+
+val pressure_avg = data_streaming.select(avg("pressure")).writeStream.queryName("Average_pressure").format("console").outputMode("complete").start()
+
+val humidity_avg = data_streaming.select(avg("humidity")).writeStream.queryName("Average_humidity").format("console").outputMode("complete").start()
+
+val temperature_avg = data_streaming.select(avg("temperature")).writeStream.queryName("Average_temperature").format("console").outputMode("complete").start()
+
+
+
+val time = data_streaming.withColumn("month",month(col("timestamp"))).withColumn("date",dayofmonth(col("timestamp"))).withColumn("year",year(col("timestamp")))
+
+val year_avg = time.groupBy("year").avg("pressure","temperature","humidity").select(col("year"),col("avg(pressure)"),col("avg(temperature)"),col("avg(humidity)")).writeStream.queryName("Average_year").format("console").outputMode("update").start()
+
+val month_avg = time.groupBy("month").avg("pressure","temperature","humidity").select(col("month"),col("avg(pressure)"),col("avg(temperature)"),col("avg(humidity)")).writeStream.queryName("Average_month").format("console").outputMode("update").start()
+
+val date_avg = time.groupBy("date").avg("pressure","temperature","humidity").select(col("date"),col("avg(pressure)"),col("avg(temperature)"),col("avg(humidity)")).writeStream.queryName("Average_date").format("console").outputMode("update").start()
+
+
+----------------------------------------------------------------------------------------------------------------------------------------------------
+#Parallel Processing:
+
+sc.defaultParallelism
+
+
+
+
+
